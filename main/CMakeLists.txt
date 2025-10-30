@@ -1,2 +1,2 @@
-idf_component_register(SRCS "main.cpp" "main.c"
+idf_component_register(SRCS "heartrate_monitor.cpp" "main.cpp" "main.c"
                     INCLUDE_DIRS ".")

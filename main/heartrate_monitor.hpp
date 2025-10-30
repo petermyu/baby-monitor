@@ -1,0 +1,6 @@
+
+namespace HeartRateMonitor 
+{
+    void Init();
+    
+}

@@ -4,6 +4,7 @@
 #include "esp_system.h"
 #include "driver/gpio.h"
 #include "soc/gpio_num.h"
+#include "heartrate_monitor.hpp"
 
  extern "C" {
         void app_main();
@@ -38,4 +39,9 @@ void app_main()
 {
     xTaskCreate(&hello_task, "hello_task", 2048, NULL, 5, NULL);
     xTaskCreate(&blinky, "blinky", 512,NULL,5,NULL );
+
+
+    // Init modules
+    HeartRateMonitor::Init();
+    
 }

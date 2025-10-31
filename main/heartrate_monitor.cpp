@@ -7,7 +7,7 @@
 #include "heartrate_monitor.hpp"
 
 
-constexpr uint8_t cSampleRatePulseOx = 1000; // Unit: ms
+constexpr uint16_t cSampleRatePulseOx = 1000; // Unit: ms
 constexpr uint8_t cSampleRateHeartRate = 100; // Unit: ms
 static bool flagSampleHeartRate = false;
 static bool flagSamplePulseOx = false;
@@ -15,34 +15,33 @@ static bool flagSamplePulseOx = false;
 void task(void *pvParameter);
 void samplePulseOx();
 void sampleHeartRate();
-void heartRateTimerCallback( TimerHandle_t xTimer );
-void pulseOxTimerCallback( TimerHandle_t xTimer );
+
+static void pulseOxTimerCallback( TimerHandle_t xTimer )
+{
+    flagSamplePulseOx = true;
+}
+
+static void heartRateTimerCallback( TimerHandle_t xTimer )
+{
+    flagSampleHeartRate = true;
+}
 
 namespace HeartRateMonitor 
 {
 
 void Init()
 {
-    if(!xTimerCreate("hr_timer", pdMS_TO_TICKS(cSampleRateHeartRate), pdTRUE, (void*) 0, heartRateTimerCallback))
+    if(!xTimerCreate("hr_timer", pdMS_TO_TICKS(cSampleRateHeartRate), pdTRUE, NULL, heartRateTimerCallback))
     {
         //error message
     }
-    if(!xTimerCreate("pulseox_timer", pdMS_TO_TICKS(flagSamplePulseOx), pdTRUE, (void*) 0, heartRateTimerCallback))
+    if(!xTimerCreate("pulseox_timer", pdMS_TO_TICKS(cSampleRatePulseOx), pdTRUE, NULL, pulseOxTimerCallback))
     {
         //error message
     }
     xTaskCreate(&task, "hr_task", 2048, NULL, 5, NULL);
 }
 
-void pulseOxTimerCallback( TimerHandle_t xTimer )
-{
-    flagSamplePulseOx = true;
-}
-
-void heartRateTimerCallback( TimerHandle_t xTimer )
-{
-    flagSampleHeartRate = true;
-}
 
 void samplePulseOx()
 {

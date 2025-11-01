@@ -23,8 +23,8 @@ void hello_task(void *pvParameter)
 }
 void blinky(void *pvParameter)
 {
-    
     /* Set the GPIO as a push/pull output */
+    gpio_reset_pin(blinkGPIO);
     gpio_set_direction(blinkGPIO, GPIO_MODE_OUTPUT);
     while(1) {
         /* Blink off (output low) */
@@ -38,7 +38,7 @@ void blinky(void *pvParameter)
 void app_main()
 {
     xTaskCreate(&hello_task, "hello_task", 2048, NULL, 5, NULL);
-    xTaskCreate(&blinky, "blinky", 512,NULL,5,NULL );
+    xTaskCreate(&blinky, "blinky", 2048,NULL,5,NULL );
 
 
     // Init modules

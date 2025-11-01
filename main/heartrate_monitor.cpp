@@ -31,6 +31,7 @@ namespace HeartRateMonitor
 
 void Init()
 {
+    printf("HeartRateMonitor::Init");
     if(!xTimerCreate("hr_timer", pdMS_TO_TICKS(cSampleRateHeartRate), pdTRUE, NULL, heartRateTimerCallback))
     {
         //error message
@@ -58,15 +59,20 @@ void task(void *pvParameter)
 {
     while(pdTRUE)
     {
+        
+        printf("task heart rate");
         if(flagSampleHeartRate)
         {
         // sample heart rate every 150ms? might need to calculate this    }
+            printf("sample heart rate");
         }
 
         if(flagSamplePulseOx)
         {
         // sample pulseox every 1sec?
+            printf("sample pulse ox");
         }
+        vTaskDelay(pdMS_TO_TICKS(100));
     }
 }
 

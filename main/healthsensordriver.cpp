@@ -10,13 +10,17 @@
 #include "driver/gpio.h"
 #include "sdkconfig.h"
 #include "esp_log.h"
+#include <stdint.h>
 #include "healthsensordriver.hpp"
 
 #define MAX30102_DEVICE_ADDR 0x57
 #define MAX30102_READ_ADDR 0xAF
 #define MAX30102_WRITE_ADDR 0xAE
 #define I2C_MASTER_FREQ_HZ 100000
-#define MAX30102_REG_FIFO 0x7
+#define MAX30102_REG_FIFO 0x07
+#define MAX30102_REG_FIFO_WR_PTR 0x04
+#define MAX30102_REG_FIFO_RD_PTR 0x06
+#define MAX30102_REG_PART_ID 0XFF
 #define PORT_NUMBER -1  //auto select the port
 constexpr gpio_num_t pinVin = gpio_num_t::GPIO_NUM_23;
 constexpr gpio_num_t pinScl = gpio_num_t::GPIO_NUM_22;
@@ -48,7 +52,6 @@ void HealthSensor::setup()
         .flags = {.enable_internal_pullup = true, .allow_pd = false},
     };
     
-    i2c_master_bus_handle_t bus_handle;
     i2c_new_master_bus(&i2c_mst_config, &bus_handle);
     
     i2c_device_config_t dev_cfg = {
@@ -63,10 +66,22 @@ void HealthSensor::setup()
 
 }
 
+int HealthSensor::ReadDataSanityCheck(uint8_t* readBuffer, size_t sizeRead, int timeout)
+{
+    const uint8_t writeBuf = MAX30102_REG_PART_ID;
+    i2c_master_transmit(dev_handle, &writeBuf, 1, timeout);
+    i2c_master_receive(dev_handle, readBuffer, sizeRead, timeout);
+    return 0;
+}
 int HealthSensor::ReadData(uint8_t* readBuffer, size_t sizeRead, int timeout)
 {
-    return i2c_master_receive(dev_handle, readBuffer, sizeRead, timeout);
-    //return i2c_master_read_from_device(static_cast<i2c_port_t>(PORT_NUMBER), MAX30102_DEVICE_ADDR, readBuffer, sizeRead, timeout);
+
+    const uint8_t writeBuf = MAX30102_REG_FIFO_WR_PTR;
+
+    i2c_master_transmit(dev_handle, &writeBuf, 1, timeout);
+    i2c_master_receive(dev_handle, readBuffer, sizeRead, timeout);
+
+    return 0;
 }
 
 int HealthSensor::WriteData(const uint8_t writeBuffer, size_t sizeWrite, int timeout)

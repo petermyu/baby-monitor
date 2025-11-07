@@ -3,9 +3,10 @@
   "idf.espIdfPathWin": "C:\\Users\\mincholisme\\esp\\v5.5.1\\esp-idf",
   "idf.pythonInstallPath": "C:\\Users\\mincholisme\\.espressif\\tools\\idf-python\\3.11.2\\python.exe",
   "idf.openOcdConfigs": [
-    "board/esp32-bridge.cfg"
+    "interface/ftdi/esp_ftdi.cfg",
+    "target/esp32.cfg"
   ],
-  "idf.portWin": "COM1",
+  "idf.portWin": "COM3",
   "idf.toolsPathWin": "C:\\Users\\mincholisme\\.espressif",
   "idf.customExtraVars": {
     "IDF_TARGET": "esp32"
@@ -14,6 +15,8 @@
   "clangd.arguments": [
     "--background-index",
     "--query-driver=C:\\Users\\mincholisme\\.espressif\\tools\\xtensa-esp-elf\\esp-14.2.0_20241119\\xtensa-esp-elf\\bin\\xtensa-esp32-elf-gcc.exe",
-    "--compile-commands-dir=${workspaceFolder}\\build"
-  ]
+    "--compile-commands-dir=c:\\Users\\mincholisme\\baby-monitor\\build"
+  ],
+  "idf.monitorPort": "COM3",
+  "idf.flashType": "UART"
 }

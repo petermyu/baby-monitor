@@ -48,6 +48,9 @@ void Init()
     xTimerStart(xTimers[0], 0);
     xTimerStart(xTimers[1], 0);
 
+    // setup LEDs - amplitude 25.4mA
+    sensorObj.Configure();
+
 }
 
 
@@ -86,8 +89,16 @@ void task(void *pvParameter)
         vTaskDelay(pdMS_TO_TICKS(1000));
         // test this
         uint8_t readBuffer = 0;
+        uint8_t fifoBuffer[6] = {0};
         sensorObj.ReadDataSanityCheck(&readBuffer, 1, 5000);
-        printf("part id should be 0x15: %d\n", readBuffer);
+        printf("part id should be 0x15: %d \n", readBuffer);
+
+        //Clear FIFO pointers
+        sensorObj.ClearFifoPtrs();
+
+        sensorObj.ReadDataFifo(fifoBuffer, 6, 1000);
+        for(int i = 0;i<6; i++)
+            printf("ReadDataFifo: %d %d \n",i, fifoBuffer[i]);
 
         //i2c_master_read_from_device(i2c_port_t::I2C_NUM_0, MAX30102_READ_ADDR, buffer, size_t read_size, TickType_t ticks_to_wait), uint8_t *data, size_t data_len, i2c_ack_type_t ack)
     }

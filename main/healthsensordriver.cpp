@@ -82,9 +82,9 @@ void HealthSensor::setup()
 
 void HealthSensor::Configure()
 {
-    WriteData(MAX30102_LED1_PULSEAMP, 0x7F, 1, 1000);
-    WriteData(MAX30102_LED2_PULSEAMP, 0x7F, 1, 1000);
-    WriteData(MAX30102_LED3_PULSEAMP, 0x7F, 1, 1000);
+    WriteData(MAX30102_LED1_PULSEAMP, 0xFF, 1, 1000);
+    WriteData(MAX30102_LED2_PULSEAMP, 0xFF, 1, 1000);
+    WriteData(MAX30102_LED3_PULSEAMP, 0xFF, 1, 1000);
 }
 int HealthSensor::ReadDataSanityCheck(uint8_t* readBuffer, size_t sizeRead, int timeout)
 {

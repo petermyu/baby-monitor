@@ -48,8 +48,15 @@ void Init()
     xTimerStart(xTimers[0], 0);
     xTimerStart(xTimers[1], 0);
 
-    // setup LEDs - amplitude 25.4mA
-    sensorObj.Configure();
+    //Setup to sense up to 18 inches, max LED brightness
+    uint8_t ledBrightness = 0xFF; //Options: 0=Off to 255=50mA
+    uint8_t sampleAverage = 4; //Options: 1, 2, 4, 8, 16, 32
+    uint8_t ledMode = 2; //Options: 1 = Red only, 2 = Red + IR, 3 = Red + IR + Green
+    uint16_t sampleRate = 400; //Options: 50, 100, 200, 400, 800, 1000, 1600, 3200
+    uint16_t pulseWidth = 411; //Options: 69, 118, 215, 411
+    uint16_t adcRange = 2048; //Options: 2048, 4096, 8192, 16384
+
+    sensorObj.Configure(ledBrightness, sampleAverage, ledMode, sampleRate, pulseWidth, adcRange); 
 
 }
 
@@ -95,6 +102,9 @@ void task(void *pvParameter)
 
         //Clear FIFO pointers
         sensorObj.ClearFifoPtrs();
+
+        sensorObj.ReadDataLED(&readBuffer, 1, 1000);
+        printf("ReadDataLED: %d \n", readBuffer);
 
         sensorObj.ReadDataFifo(fifoBuffer, 6, 1000);
         for(int i = 0;i<6; i++)

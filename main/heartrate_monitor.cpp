@@ -40,14 +40,6 @@ void Init()
     printf("HeartRateMonitor::Init");
     sensorObj = HealthSensor();
 
-    
-    xTimers[0] = xTimerCreate("hr_timer", pdMS_TO_TICKS(cSampleRateHeartRate), pdTRUE, NULL, heartRateTimerCallback);
-    xTimers[1] = xTimerCreate("pulseox_timer", pdMS_TO_TICKS(cSampleRatePulseOx), pdTRUE, NULL, pulseOxTimerCallback);
-    xTaskCreate(&task, "hr_task", 2048, NULL, 5, NULL);
-
-    xTimerStart(xTimers[0], 0);
-    xTimerStart(xTimers[1], 0);
-
     //Setup to sense up to 18 inches, max LED brightness
     uint8_t ledBrightness = 0xFF; //Options: 0=Off to 255=50mA
     uint8_t sampleAverage = 4; //Options: 1, 2, 4, 8, 16, 32
@@ -57,6 +49,14 @@ void Init()
     uint16_t adcRange = 2048; //Options: 2048, 4096, 8192, 16384
 
     sensorObj.Configure(ledBrightness, sampleAverage, ledMode, sampleRate, pulseWidth, adcRange); 
+
+    
+    xTimers[0] = xTimerCreate("hr_timer", pdMS_TO_TICKS(cSampleRateHeartRate), pdTRUE, NULL, heartRateTimerCallback);
+    xTimers[1] = xTimerCreate("pulseox_timer", pdMS_TO_TICKS(cSampleRatePulseOx), pdTRUE, NULL, pulseOxTimerCallback);
+    xTaskCreate(&task, "hr_task", 2048, NULL, 5, NULL);
+
+    xTimerStart(xTimers[0], 0);
+    xTimerStart(xTimers[1], 0);
 
 }
 
@@ -99,12 +99,6 @@ void task(void *pvParameter)
         uint8_t fifoBuffer[6] = {0};
         sensorObj.ReadDataSanityCheck(&readBuffer, 1, 5000);
         printf("part id should be 0x15: %d \n", readBuffer);
-
-        //Clear FIFO pointers
-        sensorObj.ClearFifoPtrs();
-
-        sensorObj.ReadDataLED(&readBuffer, 1, 1000);
-        printf("ReadDataLED: %d \n", readBuffer);
 
         sensorObj.ReadDataFifo(fifoBuffer, 6, 1000);
         for(int i = 0;i<6; i++)

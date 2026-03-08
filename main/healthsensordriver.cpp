@@ -160,6 +160,9 @@ static const uint8_t SLOT_IR_PILOT = 			0x06;
 static const uint8_t SLOT_GREEN_PILOT = 		0x07;
 
 static const uint8_t MAX_30105_EXPECTEDPARTID = 0x15;
+static const uint8_t I2C_BUFFER_LENGTH = 0xFF;
+
+
 static uint8_t activeLEDs;
 i2c_master_bus_handle_t bus_handle = 0;
 i2c_master_dev_handle_t dev_handle = 0;
@@ -334,10 +337,133 @@ void enableSlot(uint8_t slotNumber, uint8_t device) {
 
 //Clears all slot assignments
 void disableSlots(void) {
-  writeRegister8(MAX30105_MULTILEDCONFIG1, 0);
-  writeRegister8(MAX30105_MULTILEDCONFIG2, 0);
+    writeRegister8(MAX30105_MULTILEDCONFIG1, 0);
+    writeRegister8(MAX30105_MULTILEDCONFIG2, 0);
 }
 
+//Read the FIFO Write Pointer
+void getWritePointer(uint8_t &data) {
+    readRegister8(MAX30105_FIFOWRITEPTR, &data);
+}
+
+//Read the FIFO Read Pointer
+void getReadPointer(uint8_t &data) {
+    readRegister8(MAX30105_FIFOREADPTR, &data);
+}
+
+
+uint16_t check(void)
+{
+  //Read register FIDO_DATA in (3-byte * number of active LED) chunks
+  //Until FIFO_RD_PTR = FIFO_WR_PTR
+
+  uint8_t readPointer; 
+  getReadPointer(readPointer);
+  uint8_t writePointer;
+  getWritePointer(writePointer);
+
+  int numberOfSamples = 0;
+
+  //Do we have new data?
+  if (readPointer != writePointer)
+  {
+    //Calculate the number of readings we need to get from sensor
+    numberOfSamples = writePointer - readPointer;
+    if (numberOfSamples < 0) numberOfSamples += 32; //Wrap condition
+
+    //We now have the number of readings, now calc bytes to read
+    //For this example we are just doing Red and IR (3 bytes each)
+    int bytesLeftToRead = numberOfSamples * activeLEDs * 3;
+
+    //Get ready to read a burst of data from the FIFO register
+    uint8_t reg = MAX30105_FIFODATA;
+    i2c_master_transmit(dev_handle, &reg, 1, 1000);
+    
+
+
+    //We may need to read as many as 288 bytes so we read in blocks no larger than I2C_BUFFER_LENGTH
+    //I2C_BUFFER_LENGTH changes based on the platform. 64 bytes for SAMD21, 32 bytes for Uno.
+    //Wire.requestFrom() is limited to BUFFER_LENGTH which is 32 on the Uno
+    while (bytesLeftToRead > 0)
+    {
+      int toGet = bytesLeftToRead;
+      if (toGet > I2C_BUFFER_LENGTH)
+      {
+        //If toGet is 32 this is bad because we read 6 bytes (Red+IR * 3 = 6) at a time
+        //32 % 6 = 2 left over. We don't want to request 32 bytes, we want to request 30.
+        //32 % 9 (Red+IR+GREEN) = 5 left over. We want to request 27.
+
+        toGet = I2C_BUFFER_LENGTH - (I2C_BUFFER_LENGTH % (activeLEDs * 3)); //Trim toGet to be a multiple of the samples we need to read
+      }
+
+      bytesLeftToRead -= toGet;
+
+      //Request toGet number of bytes from sensor
+      uint8_t buf = 0;
+      i2c_master_receive(dev_handle, &buf, toGet, 2000);
+      
+      while (toGet > 0)
+      {
+        sense.head++; //Advance the head of the storage struct
+        sense.head %= STORAGE_SIZE; //Wrap condition
+
+        byte temp[sizeof(uint32_t)]; //Array of 4 bytes that we will convert into long
+        uint32_t tempLong;
+
+        //Burst read three bytes - RED
+        temp[3] = 0;
+        temp[2] = _i2cPort->read();
+        temp[1] = _i2cPort->read();
+        temp[0] = _i2cPort->read();
+
+        //Convert array to long
+        memcpy(&tempLong, temp, sizeof(tempLong));
+		
+		tempLong &= 0x3FFFF; //Zero out all but 18 bits
+
+        sense.red[sense.head] = tempLong; //Store this reading into the sense array
+
+        if (activeLEDs > 1)
+        {
+          //Burst read three more bytes - IR
+          temp[3] = 0;
+          temp[2] = _i2cPort->read();
+          temp[1] = _i2cPort->read();
+          temp[0] = _i2cPort->read();
+
+          //Convert array to long
+          memcpy(&tempLong, temp, sizeof(tempLong));
+
+		  tempLong &= 0x3FFFF; //Zero out all but 18 bits
+          
+		  sense.IR[sense.head] = tempLong;
+        }
+
+        if (activeLEDs > 2)
+        {
+          //Burst read three more bytes - Green
+          temp[3] = 0;
+          temp[2] = _i2cPort->read();
+          temp[1] = _i2cPort->read();
+          temp[0] = _i2cPort->read();
+
+          //Convert array to long
+          memcpy(&tempLong, temp, sizeof(tempLong));
+
+		  tempLong &= 0x3FFFF; //Zero out all but 18 bits
+
+          sense.green[sense.head] = tempLong;
+        }
+
+        toGet -= activeLEDs * 3;
+      }
+
+    } //End while (bytesLeftToRead > 0)
+
+  } //End readPtr != writePtr
+
+  return (numberOfSamples); //Let the world know how much new data we found
+}
 
 void HealthSensor::Configure(uint8_t powerLevel, uint8_t sampleAverage, uint8_t ledMode, uint16_t sampleRate, uint16_t pulseWidth, uint16_t adcRange)
 { 
@@ -446,28 +572,4 @@ int HealthSensor::WriteData(uint8_t reg_addr, uint8_t writeBuffer, size_t sizeWr
     return 0;
 }
 
-int HealthSensor::ClearFifoPtrs()
-{ 
-    uint8_t fifo_wr_buf = MAX30102_REG_FIFO_WR_PTR;
-    uint8_t fifo_rd_buf = MAX30102_REG_FIFO_RD_PTR;
-    uint8_t fifo_ovf_buf = 0x05;
-    uint8_t fifo_clr = 0;
-    i2c_master_transmit_multi_buffer_info_t fifo_wr_clr[2] = {
-        {.write_buffer = &fifo_wr_buf, .buffer_size = 1},
-        {.write_buffer = &fifo_clr, .buffer_size = 1},
-    };
-    i2c_master_transmit_multi_buffer_info_t fifo_rd_clr[2] = {
-        {.write_buffer = &fifo_rd_buf, .buffer_size = 1},
-        {.write_buffer = &fifo_clr, .buffer_size = 1},
-    };
-    i2c_master_transmit_multi_buffer_info_t fifo_ovf_clr[2] = {
-        {.write_buffer = &fifo_ovf_buf, .buffer_size = 1},
-        {.write_buffer = &fifo_clr, .buffer_size = 1},
-    };
-
-    i2c_master_multi_buffer_transmit(dev_handle, fifo_wr_clr, sizeof(fifo_wr_clr) / sizeof(i2c_master_transmit_multi_buffer_info_t), -1);
-    i2c_master_multi_buffer_transmit(dev_handle, fifo_rd_clr, sizeof(fifo_rd_clr) / sizeof(i2c_master_transmit_multi_buffer_info_t), -1);
-    i2c_master_multi_buffer_transmit(dev_handle, fifo_ovf_clr, sizeof(fifo_ovf_clr) / sizeof(i2c_master_transmit_multi_buffer_info_t), -1);
-    return 0;
-}
 

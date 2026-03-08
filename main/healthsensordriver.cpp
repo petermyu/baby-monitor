@@ -351,7 +351,7 @@ void getReadPointer(uint8_t &data) {
     readRegister8(MAX30105_FIFOREADPTR, &data);
 }
 
-
+/*
 uint16_t check(void)
 {
   //Read register FIDO_DATA in (3-byte * number of active LED) chunks
@@ -464,7 +464,7 @@ uint16_t check(void)
 
   return (numberOfSamples); //Let the world know how much new data we found
 }
-
+*/
 void HealthSensor::Configure(uint8_t powerLevel, uint8_t sampleAverage, uint8_t ledMode, uint16_t sampleRate, uint16_t pulseWidth, uint16_t adcRange)
 { 
       //FIFO Configuration
